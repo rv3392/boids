@@ -4,6 +4,10 @@ const SEPARATION_DISTANCE = 20;
 const STEERING_LIMIT = 0.2;
 const ACCELERATION_LIMIT = 0.05;
 
+var alignmentFactor = 0.5;
+var separationFactor = -0.05;
+var togethernessFactor = 0.01;
+
 function add(vec_a: vec3, vec_b: vec3) {
     return new vec3(vec_a.x + vec_b.x, vec_a.y + vec_b.y, vec_a.z + vec_b.z);
 }
@@ -162,14 +166,14 @@ class Bird {
     private flyToCenter(neighbourhood: Neighbourhood) {
         const delta = sub(this.position, neighbourhood.averagePosition);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.01);
+        unitDelta.scaleBy(togethernessFactor);
         this.velocity = add(this.velocity, unitDelta);
     }
 
     private matchAlignment(neighbourhood: Neighbourhood) {
         const delta = sub(this.velocity, neighbourhood.averageVelocity);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.5);
+        unitDelta.scaleBy(alignmentFactor);
         this.velocity = add(this.velocity, unitDelta);
     }
 
@@ -190,7 +194,7 @@ class Bird {
         }
 
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(-0.05);
+        unitDelta.scaleBy(separationFactor * -1);
         this.velocity = add(this.velocity, unitDelta);
     }
 
@@ -216,8 +220,8 @@ class Bird {
     }
 }
 
-function createBirds(n: number) {
-    return new Flock(n, 200);
+function createBirds(n: number, neighbourhood_size: number) {
+    return new Flock(n, neighbourhood_size);
 }
 
 const canvas: HTMLCanvasElement = document.querySelector('.mainCanvas');
@@ -226,7 +230,31 @@ const height = canvas.height = window.innerHeight;
 
 const ctx = canvas.getContext('2d');
 
-const flock = createBirds(300);
+const flock = createBirds(300, height / 2);
+
+const alignmentSlider = <HTMLInputElement> document.getElementById("alignment");
+const togethernessSlider = <HTMLInputElement> document.getElementById("togetherness");
+const separationSlider = <HTMLInputElement> document.getElementById("separation");
+
+alignmentSlider.value = (alignmentFactor * 1000).toString();
+togethernessSlider.value = (togethernessFactor * 1000).toString();
+separationSlider.value = (separationFactor * 1000).toString();
+
+
+alignmentSlider.oninput = function() {
+    alignmentFactor = parseFloat(alignmentSlider.value) / 1000;
+    console.log(alignmentFactor);
+}
+
+togethernessSlider.oninput = function() {
+    togethernessFactor = parseFloat(togethernessSlider.value) / 1000;
+    console.log(togethernessFactor);
+}
+
+separationSlider.oninput = function() {
+    separationFactor = parseFloat(separationSlider.value) / 1000;
+    console.log(separationFactor);
+}
 
 function loop() {
     ctx.fillStyle = 'rgb(0, 0, 0)';
