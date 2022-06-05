@@ -4,12 +4,67 @@ const SEPARATION_DISTANCE = 20;
 const STEERING_LIMIT = 0.2;
 const ACCELERATION_LIMIT = 0.05;
 
+function add(vec_a: vec3, vec_b: vec3) {
+    return new vec3(vec_a.x + vec_b.x, vec_a.y + vec_b.y, vec_a.z + vec_b.z);
+}
+
+/// vec_a - vec_b
+function sub(vec_a: vec3, vec_b: vec3) {
+    const negative_b = vec_b.clone();
+    negative_b.scaleBy(-1);
+    return add(vec_a, negative_b);
+}
+
+function avg(vec_list: Array<vec3>) {
+    const avgVec = new vec3(0, 0, 0);
+    for (let vec of vec_list) {
+        avgVec.add(vec);
+    }
+    avgVec.scaleBy(1 / vec_list.length);
+    return avgVec;
+}
+
+class vec3 {
+    x: number;
+    y: number;
+    z: number;
+
+    constructor(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    add(vec: vec3) {
+        this.x += vec.x;
+        this.y += vec.y;
+        this.z += vec.z;
+    }
+
+    scaleBy(scalar: number) {
+        this.x *= scalar;
+        this.y *= scalar;
+        this.z *= scalar;
+    }
+
+    getUnit() {
+        const magnitude = Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2) + Math.pow(this.z, 2));
+        const scaled = this.clone();
+        scaled.scaleBy(1 / magnitude);
+        return scaled;
+    }
+
+    clone() {
+        return new vec3(this.x, this.y, this.z);
+    }
+}
+
 class Flock {
     n: number;
     neighbourhood_size: number;
     birds: Bird[];
 
-    constructor(n, neighbourhood_size) {
+    constructor(n: number, neighbourhood_size: number) {
         this.n = n;
         this.neighbourhood_size = neighbourhood_size;
         this.birds = []
@@ -39,7 +94,7 @@ class Flock {
                 neighbourhood.addBird(other_bird);
             }
         }
-        neighbourhood.calcAverageDirection();
+        neighbourhood.calcAverageVelocity();
         neighbourhood.calcAveragePosition();
         return neighbourhood
     }
@@ -47,103 +102,101 @@ class Flock {
 
 class Neighbourhood {
     public birds: Bird[];
-    averageDirection: number;
-    averagePositionX: number;
-    averagePositionY: number;
+    averageVelocity: vec3;
+    averagePosition: vec3;
 
     constructor() {
         this.birds = []
-        this.averageDirection = 0;
-        this.averagePositionX = 0;
-        this.averagePositionY = 0;
+        this.averageVelocity = new vec3(0, 0, 0);
+        this.averagePosition = new vec3(0, 0, 0);
     }
 
     public addBird(bird: Bird) {
         this.birds.push(bird);
     }
 
-    public calcAverageDirection() {
-        const directions = this.birds.map(({direction}) => direction);
-        this.averageDirection = avgDirections(directions);
+    public calcAverageVelocity() {
+        const velocities = this.birds.map(({velocity}) => velocity);
+        this.averageVelocity = avg(velocities);
     }
 
     public calcAveragePosition() {
-        let xTotal = 0;
-        let yTotal = 0;
-        for (var bird of this.birds) {
-            xTotal += bird.x;
-            yTotal += bird.y;
-        }
-        this.averagePositionX = xTotal / this.birds.length;
-        this.averagePositionY = yTotal / this.birds.length;
+        const positions = this.birds.map(({position}) => position);
+        this.averagePosition = avg(positions);
     }
 }
 
-function calculateDistance(bird1, bird2) {
-    return Math.sqrt(Math.pow(bird1.x - bird2.x, 2) + Math.pow(bird1.y - bird2.y, 2));
-}
-
-function avgDirections(directions, weights=null) {
-    let northSouthTotal = 0;
-    let eastWestTotal = 0;
-    for (let i = 0; i < directions.length; i++) {
-        let weight = 1;
-        if (weights != null) {
-            weight = weights[i];;
-        }
-
-        northSouthTotal += Math.cos(directions[i]) * weight;
-        eastWestTotal += Math.sin(directions[i]) * weight;
-    }
-    return Math.atan2(northSouthTotal, eastWestTotal);
-}
-
-function applySpeedDirectionToPosition(x, y, speed, direction) {
-    const new_x = x + Math.cos(direction) * speed;
-    const new_y = y + Math.sin(direction) * speed;
-
-    return [new_x, new_y];
+function calculateDistance(bird1: Bird, bird2: Bird) {
+    return Math.sqrt(Math.pow(bird1.position.x - bird2.position.x, 2) + Math.pow(bird1.position.y - bird2.position.y, 2));
 }
 
 class Bird {
     private size: number;
-    public x: number;
-    public y: number;
-    public speed: number;
-    public direction: number;
+    public position: vec3;
+    public velocity: vec3;
 
-    constructor(size, x, y) {
+    constructor(size: number, x: number, y: number) {
         this.size = size;
-        this.x = x;
-        this.y = y;
-        this.speed = 0;
-        this.direction = 0;
+        this.position = new vec3(x, y, 0);
+        this.velocity = new vec3(0, 0, 0);
     }
 
     public update(neighbourhood: Neighbourhood) {
-        this.speed = 1 + Math.random() * 0.3 - 0.3;
-        this.direction = this.calculateDirection(neighbourhood);
-        [this.x, this.y] = applySpeedDirectionToPosition(this.x, this.y, this.speed, this.direction);
+        this.updateVelocity(neighbourhood);
+        this.position = add(this.position, this.velocity);
     }
 
-    private calculateDirection(neighbourhood: Neighbourhood) {
-        const deltaX = this.x - neighbourhood.averagePositionX;
-        const deltaY = this.y - neighbourhood.averagePositionY;
-        const directionToCenter = Math.atan2(deltaX, deltaY);
-        const randomAdjustment = Math.random() * 0.3 - 0.3;
-        return avgDirections([neighbourhood.averageDirection, directionToCenter], [0.2, 1.1]) + randomAdjustment;
+    private updateVelocity(neighbourhood: Neighbourhood) {
+        this.flyToCenter(neighbourhood);
+        this.matchAlignment(neighbourhood);
+        this.separate(neighbourhood);
+    }
+
+    private flyToCenter(neighbourhood: Neighbourhood) {
+        const delta = sub(this.position, neighbourhood.averagePosition);
+        const unitDelta = delta.getUnit();
+        unitDelta.scaleBy(0.1);
+        this.velocity = add(this.velocity, unitDelta);
+    }
+
+    private matchAlignment(neighbourhood: Neighbourhood) {
+        const delta = sub(this.position, neighbourhood.averageVelocity);
+        const unitDelta = delta.getUnit();
+        unitDelta.scaleBy(0.1);
+        this.velocity = add(this.velocity, unitDelta);
+    }
+
+    private separate(neighbourhood: Neighbourhood) {
+        let lowestDistance = Number.MAX_VALUE;
+        let closestBird: Bird = this;
+        for (let bird of neighbourhood.birds) {
+            const distance = calculateDistance(this, bird);
+            if (distance < SEPARATION_DISTANCE && distance < lowestDistance && bird != this) {
+                lowestDistance = distance;
+                closestBird = bird;
+            }
+        }
+
+        let delta = new vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, 0);
+        if (lowestDistance > 2) {
+            delta = sub(this.position, closestBird.position);
+        }
+
+        const unitDelta = delta.getUnit();
+        unitDelta.scaleBy(-0.01);
+        this.velocity = add(this.velocity, unitDelta);
     }
 
     public render(context: CanvasRenderingContext2D) {
         const oldColor = context.fillStyle;
         context.fillStyle = 'rgb(0,0,255)';
-        context.fillRect(this.x, this.y, this.size, this.size);
+        context.fillRect(this.position.x, this.position.y, this.size, this.size);
         context.fillStyle = oldColor;
     }
 }
 
-function createBirds(n) {
-    return new Flock(n, 200);
+function createBirds(n: number) {
+    return new Flock(n, 100);
 }
 
 const canvas: HTMLCanvasElement = document.querySelector('.mainCanvas');
