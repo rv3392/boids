@@ -1,10 +1,10 @@
 const BIRD_SIZE = 15;
-const SEPARATION_DISTANCE = 20;
+const SEPARATION_DISTANCE = 100;
 
 const STEERING_LIMIT = 0.2;
 const ACCELERATION_LIMIT = 0.05;
 
-var alignmentFactor = 0.5;
+var alignmentFactor = 0.75;
 var separationFactor = -0.05;
 var togethernessFactor = 0.01;
 
@@ -189,7 +189,7 @@ class Bird {
         }
 
         let delta = new vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, 0);
-        if (lowestDistance > 1) {
+        if (lowestDistance != 0) {
             delta = sub(this.position, closestBird.position);
         }
 
