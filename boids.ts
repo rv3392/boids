@@ -49,6 +49,10 @@ class vec3 {
 
     getUnit() {
         const magnitude = Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2) + Math.pow(this.z, 2));
+        if (magnitude == 0) {
+            return new vec3(0, 0, 0);
+        }
+        
         const scaled = this.clone();
         scaled.scaleBy(1 / magnitude);
         return scaled;
@@ -150,19 +154,22 @@ class Bird {
         this.flyToCenter(neighbourhood);
         this.matchAlignment(neighbourhood);
         this.separate(neighbourhood);
+        this.forceAwayFromEdge();
+        this.velocity = this.velocity.getUnit();
+        this.velocity.scaleBy(3);
     }
 
     private flyToCenter(neighbourhood: Neighbourhood) {
         const delta = sub(this.position, neighbourhood.averagePosition);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.1);
+        unitDelta.scaleBy(0.005);
         this.velocity = add(this.velocity, unitDelta);
     }
 
     private matchAlignment(neighbourhood: Neighbourhood) {
         const delta = sub(this.position, neighbourhood.averageVelocity);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.1);
+        unitDelta.scaleBy(0.05);
         this.velocity = add(this.velocity, unitDelta);
     }
 
@@ -183,8 +190,22 @@ class Bird {
         }
 
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(-0.01);
+        unitDelta.scaleBy(-0.05);
         this.velocity = add(this.velocity, unitDelta);
+    }
+
+    private forceAwayFromEdge() {
+        if (window.innerWidth - this.position.x < 50) {
+            this.velocity.x -= 1;
+        } else if (this.position.x < 50) {
+            this.velocity.x += 1;
+        }
+
+        if (window.innerHeight - this.position.y < 50) {
+            this.velocity.y -= 1;
+        } else if (this.position.y < 50) {
+            this.velocity.y += 1;
+        }
     }
 
     public render(context: CanvasRenderingContext2D) {
@@ -196,7 +217,7 @@ class Bird {
 }
 
 function createBirds(n: number) {
-    return new Flock(n, 100);
+    return new Flock(n, 200);
 }
 
 const canvas: HTMLCanvasElement = document.querySelector('.mainCanvas');
