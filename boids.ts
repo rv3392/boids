@@ -73,7 +73,7 @@ class Flock {
         this.neighbourhood_size = neighbourhood_size;
         this.birds = []
         for (let i = 0; i < this.n; i++) {
-            this.birds.push(new Bird(BIRD_SIZE, 100, 100))
+            this.birds.push(new Bird(BIRD_SIZE, window.innerWidth / 2, window.innerHeight / 2))
         }
     }
 
@@ -162,14 +162,14 @@ class Bird {
     private flyToCenter(neighbourhood: Neighbourhood) {
         const delta = sub(this.position, neighbourhood.averagePosition);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.005);
+        unitDelta.scaleBy(0.01);
         this.velocity = add(this.velocity, unitDelta);
     }
 
     private matchAlignment(neighbourhood: Neighbourhood) {
-        const delta = sub(this.position, neighbourhood.averageVelocity);
+        const delta = sub(this.velocity, neighbourhood.averageVelocity);
         const unitDelta = delta.getUnit();
-        unitDelta.scaleBy(0.05);
+        unitDelta.scaleBy(0.5);
         this.velocity = add(this.velocity, unitDelta);
     }
 
@@ -185,7 +185,7 @@ class Bird {
         }
 
         let delta = new vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, 0);
-        if (lowestDistance > 2) {
+        if (lowestDistance > 1) {
             delta = sub(this.position, closestBird.position);
         }
 
